@@ -184,7 +184,7 @@
 /* ============================================================
    1) URL del backend (Apps Script).  ←  PEGA TU URL AQUÍ
    ============================================================ */
-window.API_URL = "PEGA_AQUI_LA_URL_DE_TU_APPS_SCRIPT";
+window.API_URL = "https://script.google.com/macros/s/AKfycbzZrCi866_Omz0H9QNAvepI7GcBC7pKh4t4YgTdBlB6nZ0ytqm45dDn2OYi0Ec3bhlL/exec";
 
 /* ============================================================
    2) Estado de la app
@@ -282,7 +282,7 @@ function locMsg(texto, ok){
 }
 
 function cargarConfig(){
-  if(window.API_URL.indexOf('https://script.google.com/macros/s/AKfycbzZrCi866_Omz0H9QNAvepI7GcBC7pKh4t4YgTdBlB6nZ0ytqm45dDn2OYi0Ec3bhlL/exec')===0){
+  if(window.API_URL.indexOf('PEGA_AQUI')===0){
     locMsg('⚠ Falta pegar la URL del backend (window.API_URL) en el código.',false);
     // Fallback de demostración para que se vea la interfaz:
     estado.locaciones=[
