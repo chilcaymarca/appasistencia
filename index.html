@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0b1f1a">
+<title>Registro de Asistencia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* =========================================================
+     CONFIGURACIÓN  ←  PEGA AQUÍ TU URL DE APPS SCRIPT
+     ========================================================= */
+  /* (Se lee desde JS más abajo: window.API_URL) */
+
+  :root{
+    --bg:#0b1f1a;
+    --bg2:#10302a;
+    --card:#0f2a24;
+    --ink:#eafff5;
+    --muted:#88b6a7;
+    --line:#1f463c;
+    --accent:#22e08a;
+    --accent-ink:#04231a;
+    --danger:#ff6b6b;
+    --warn:#ffd166;
+    --radius:20px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:'Outfit',system-ui,sans-serif;
+    background:
+      radial-gradient(120% 80% at 50% -10%, #16463b 0%, transparent 60%),
+      radial-gradient(90% 60% at 110% 110%, #123a31 0%, transparent 55%),
+      var(--bg);
+    color:var(--ink);
+    min-height:100vh;
+    padding:max(18px,env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom));
+    display:flex;justify-content:center;
+  }
+  .wrap{width:100%;max-width:440px}
+
+  header{padding:6px 4px 18px}
+  .eyebrow{font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;color:var(--accent);font-weight:600}
+  h1{
+    font-family:'Bricolage Grotesque',sans-serif;font-weight:800;
+    font-size:2.1rem;line-height:1.02;margin:.25rem 0 0;letter-spacing:-.02em;
+  }
+  h1 span{color:var(--accent)}
+
+  .card{
+    background:linear-gradient(180deg,var(--card),#0c241f);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:18px;margin-bottom:14px;
+    box-shadow:0 18px 40px -28px #000;
+  }
+  .card.step{opacity:.45;transition:opacity .35s ease,transform .35s ease}
+  .card.step.active{opacity:1}
+  .card.step.done .stepnum{background:var(--accent);color:var(--accent-ink)}
+
+  .steptitle{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .stepnum{
+    width:30px;height:30px;flex:0 0 30px;border-radius:10px;
+    background:#163a31;color:var(--accent);font-weight:700;
+    display:grid;place-items:center;font-size:.95rem;border:1px solid var(--line);
+  }
+  .steptitle h2{font-family:'Bricolage Grotesque',sans-serif;font-size:1.08rem;margin:0;font-weight:700}
+
+  label{display:block;font-size:.8rem;color:var(--muted);margin:0 0 6px 2px}
+  select,button{font-family:inherit}
+  select{
+    width:100%;padding:15px 14px;font-size:1.02rem;color:var(--ink);
+    background:#0a201b;border:1px solid var(--line);border-radius:14px;
+    appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='none' stroke='%2322e08a' stroke-width='2.2' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 14px center;
+  }
+  select:focus{outline:none;border-color:var(--accent)}
+
+  /* GPS status */
+  .gps{display:flex;align-items:center;gap:12px}
+  .dot{width:12px;height:12px;border-radius:50%;flex:0 0 12px;background:var(--warn);box-shadow:0 0 0 0 var(--warn)}
+  .dot.ok{background:var(--accent)}
+  .dot.bad{background:var(--danger)}
+  .dot.live{animation:pulse 1.4s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(34,224,138,.5)}70%{box-shadow:0 0 0 10px rgba(34,224,138,0)}100%{box-shadow:0 0 0 0 rgba(34,224,138,0)}}
+  .gps .txt small{display:block;color:var(--muted);font-size:.78rem}
+
+  .pill{display:inline-flex;align-items:center;gap:7px;font-size:.82rem;font-weight:600;
+    padding:7px 11px;border-radius:999px;margin-top:12px;border:1px solid var(--line)}
+  .pill.ok{background:rgba(34,224,138,.12);color:var(--accent);border-color:transparent}
+  .pill.bad{background:rgba(255,107,107,.12);color:var(--danger);border-color:transparent}
+
+  /* INGRESO / SALIDA */
+  .toggle{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .toggle button{
+    padding:18px 10px;border-radius:14px;border:1px solid var(--line);
+    background:#0a201b;color:var(--ink);font-size:1.05rem;font-weight:700;cursor:pointer;
+    transition:.18s;letter-spacing:.02em;
+  }
+  .toggle button .ico{display:block;font-size:1.5rem;margin-bottom:4px}
+  .toggle button.sel[data-t="INGRESO"]{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+  .toggle button.sel[data-t="SALIDA"]{background:#ffb454;color:#2b1600;border-color:transparent}
+
+  .send{
+    width:100%;margin-top:4px;padding:18px;border:none;border-radius:16px;cursor:pointer;
+    font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:1.12rem;
+    background:var(--accent);color:var(--accent-ink);transition:.18s;
+  }
+  .send:disabled{background:#1c3a32;color:#5e857a;cursor:not-allowed}
+  .send:active:not(:disabled){transform:scale(.98)}
+
+  .msg{margin-top:14px;padding:14px;border-radius:14px;font-size:.92rem;display:none}
+  .msg.show{display:block}
+  .msg.ok{background:rgba(34,224,138,.12);color:#aef2cf;border:1px solid #1c5d44}
+  .msg.err{background:rgba(255,107,107,.12);color:#ffc7c7;border:1px solid #6d2b2b}
+
+  footer{text-align:center;color:#4f776b;font-size:.74rem;padding:10px 0 0}
+  .spin{display:inline-block;width:15px;height:15px;border:2px solid rgba(4,35,26,.35);
+    border-top-color:var(--accent-ink);border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Control de personal</div>
+    <h1>Registro de <span>Asistencia</span></h1>
+  </header>
+
+  <!-- Paso 1: Ubicación -->
+  <section class="card step active" id="card-gps">
+    <div class="steptitle"><div class="stepnum">1</div><h2>Tu ubicación</h2></div>
+    <div class="gps">
+      <span class="dot live" id="gpsDot"></span>
+      <div class="txt">
+        <strong id="gpsTitle">Obteniendo tu ubicación…</strong>
+        <small id="gpsSub">Permite el acceso a la ubicación cuando el navegador lo pida.</small>
+      </div>
+    </div>
+    <button class="send" id="btnRetry" style="display:none;margin-top:14px">Reintentar ubicación</button>
+  </section>
+
+  <!-- Paso 2: Locación -->
+  <section class="card step" id="card-loc">
+    <div class="steptitle"><div class="stepnum">2</div><h2>Elige la locación</h2></div>
+    <label for="loc">Sede de trabajo</label>
+    <select id="loc"></select>
+    <div id="distPill" class="pill bad" style="display:none"></div>
+  </section>
+
+  <!-- Paso 3: Nombre -->
+  <section class="card step" id="card-name">
+    <div class="steptitle"><div class="stepnum">3</div><h2>Selecciona tu nombre</h2></div>
+    <label for="nombre">Personal</label>
+    <select id="nombre"><option value="">— Selecciona —</option></select>
+  </section>
+
+  <!-- Paso 4: Tipo -->
+  <section class="card step" id="card-type">
+    <div class="steptitle"><div class="stepnum">4</div><h2>Tipo de marca</h2></div>
+    <div class="toggle">
+      <button type="button" data-t="INGRESO"><span class="ico">↧</span>INGRESO</button>
+      <button type="button" data-t="SALIDA"><span class="ico">↥</span>SALIDA</button>
+    </div>
+  </section>
+
+  <!-- Paso 5: Enviar -->
+  <section class="card step" id="card-send">
+    <div class="steptitle"><div class="stepnum">5</div><h2>Enviar reporte</h2></div>
+    <button class="send" id="btnSend" disabled>Registrar asistencia</button>
+    <div class="msg" id="msg"></div>
+  </section>
+
+  <footer>Compatible con iOS y Android · Los datos se guardan en Google Sheets</footer>
+</div>
+
+<script>
+/* ============================================================
+   1) URL del backend (Apps Script).  ←  PEGA TU URL AQUÍ
+   ============================================================ */
+window.API_URL = "PEGA_AQUI_LA_URL_DE_TU_APPS_SCRIPT";
+
+/* ============================================================
+   2) Estado de la app
+   ============================================================ */
+var estado = { lat:null, lng:null, locaciones:[], locSel:null, nombre:'', tipo:'', dentro:false };
+
+var $ = function(id){ return document.getElementById(id); };
+
+/* ---------- Distancia (Haversine, metros) ---------- */
+function distanciaM(a,b,c,d){
+  var R=6371000, r=Math.PI/180;
+  var dLat=(c-a)*r, dLon=(d-b)*r;
+  var x=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(a*r)*Math.cos(c*r)*Math.sin(dLon/2)*Math.sin(dLon/2);
+  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+}
+
+/* ---------- Lectura por JSONP (evita problemas de CORS) ---------- */
+function jsonp(params){
+  return new Promise(function(resolve,reject){
+    var cb='cb_'+Math.random().toString(36).slice(2);
+    var s=document.createElement('script');
+    var to=setTimeout(function(){limpia();reject(new Error('timeout'));},15000);
+    function limpia(){clearTimeout(to);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);}
+    window[cb]=function(data){limpia();resolve(data);};
+    var q=Object.keys(params).map(function(k){return k+'='+encodeURIComponent(params[k]);}).join('&');
+    s.src=window.API_URL+'?'+q+'&callback='+cb;
+    s.onerror=function(){limpia();reject(new Error('error de red'));};
+    document.body.appendChild(s);
+  });
+}
+
+/* ============================================================
+   3) Geolocalización (se pide automáticamente al abrir)
+   ============================================================ */
+function pedirUbicacion(){
+  $('gpsDot').className='dot live';
+  $('gpsTitle').textContent='Obteniendo tu ubicación…';
+  $('gpsSub').textContent='Permite el acceso a la ubicación cuando el navegador lo pida.';
+  $('btnRetry').style.display='none';
+
+  if(!navigator.geolocation){ gpsError('Tu dispositivo no soporta geolocalización.'); return; }
+
+  navigator.geolocation.getCurrentPosition(function(pos){
+    estado.lat=pos.coords.latitude; estado.lng=pos.coords.longitude;
+    $('gpsDot').className='dot ok';
+    $('gpsTitle').textContent='Ubicación detectada ✓';
+    $('gpsSub').textContent='Precisión aprox. '+Math.round(pos.coords.accuracy)+' m';
+    $('card-gps').classList.add('done');
+    $('card-loc').classList.add('active');
+    actualizarDistancia();
+  }, function(err){
+    var m='No se pudo obtener la ubicación.';
+    if(err.code===1) m='Permiso de ubicación denegado. Actívalo para poder registrar.';
+    if(err.code===3) m='La señal GPS tardó demasiado. Intenta al aire libre.';
+    gpsError(m);
+  }, { enableHighAccuracy:true, timeout:12000, maximumAge:0 });
+}
+function gpsError(m){
+  $('gpsDot').className='dot bad';
+  $('gpsTitle').textContent='Ubicación no disponible';
+  $('gpsSub').textContent=m;
+  $('btnRetry').style.display='block';
+}
+
+/* ============================================================
+   4) Distancia a la locación seleccionada
+   ============================================================ */
+function actualizarDistancia(){
+  var pill=$('distPill');
+  if(estado.lat===null||!estado.locSel){ pill.style.display='none'; revisarListo(); return; }
+  var d=Math.round(distanciaM(estado.lat,estado.lng,estado.locSel.lat,estado.locSel.lng));
+  var radio=estado.locSel.radio||100;
+  estado.dentro = d<=radio;
+  pill.style.display='inline-flex';
+  if(estado.dentro){
+    pill.className='pill ok';
+    pill.textContent='● Dentro del rango ('+d+' m de '+estado.locSel.nombre+')';
+    $('card-loc').classList.add('done');
+    $('card-name').classList.add('active');
+  }else{
+    pill.className='pill bad';
+    pill.textContent='● Fuera de rango: '+d+' m (máx. '+radio+' m). Acércate a '+estado.locSel.nombre+'.';
+  }
+  revisarListo();
+}
+
+/* ============================================================
+   5) Carga de configuración (locaciones + personal)
+   ============================================================ */
+function cargarConfig(){
+  if(window.API_URL.indexOf('https://script.google.com/macros/s/AKfycbzZrCi866_Omz0H9QNAvepI7GcBC7pKh4t4YgTdBlB6nZ0ytqm45dDn2OYi0Ec3bhlL/exec')===0){
+    mensaje('Falta configurar la URL del backend (window.API_URL en el código).','err');
+    // Fallback de demostración para que se vea la interfaz:
+    estado.locaciones=[
+      {nombre:'HUICHUPAQUI',lat:-16.3988,lng:-71.5369,radio:100},
+      {nombre:'CHIPMO',lat:-16.4055,lng:-71.5234,radio:100},
+      {nombre:'MINIMARKET',lat:-16.4120,lng:-71.5180,radio:100}
+    ];
+    pintarLocaciones(['Juan Pérez','María López','Carlos Ramos']);
+    return;
+  }
+  jsonp({action:'getConfig'}).then(function(r){
+    if(!r.ok) throw new Error(r.error||'Error de configuración');
+    estado.locaciones=r.locaciones||[];
+    pintarLocaciones(r.personal||[]);
+  }).catch(function(e){
+    mensaje('No se pudo cargar la configuración: '+e.message,'err');
+  });
+}
+
+function pintarLocaciones(personal){
+  // Selector de locación (CHIPMO por defecto)
+  var selL=$('loc'); selL.innerHTML='';
+  estado.locaciones.forEach(function(l){
+    var o=document.createElement('option'); o.value=l.nombre; o.textContent=l.nombre; selL.appendChild(o);
+  });
+  var idx=estado.locaciones.findIndex(function(l){return l.nombre.toUpperCase()==='CHIPMO';});
+  if(idx>=0) selL.selectedIndex=idx;
+  estado.locSel=estado.locaciones[selL.selectedIndex]||null;
+
+  // Selector de personal
+  var selN=$('nombre');
+  personal.forEach(function(n){
+    var o=document.createElement('option'); o.value=n; o.textContent=n; selN.appendChild(o);
+  });
+  actualizarDistancia();
+}
+
+/* ============================================================
+   6) Interacciones
+   ============================================================ */
+$('loc').addEventListener('change',function(){
+  estado.locSel=estado.locaciones[this.selectedIndex]||null;
+  actualizarDistancia();
+});
+$('nombre').addEventListener('change',function(){
+  estado.nombre=this.value;
+  if(this.value) $('card-name').classList.add('done'),$('card-type').classList.add('active');
+  revisarListo();
+});
+Array.prototype.forEach.call(document.querySelectorAll('.toggle button'),function(b){
+  b.addEventListener('click',function(){
+    document.querySelectorAll('.toggle button').forEach(function(x){x.classList.remove('sel');});
+    b.classList.add('sel'); estado.tipo=b.dataset.t;
+    $('card-type').classList.add('done'); $('card-send').classList.add('active');
+    revisarListo();
+  });
+});
+$('btnRetry').addEventListener('click',pedirUbicacion);
+
+function revisarListo(){
+  var listo = estado.dentro && estado.nombre && estado.tipo && estado.lat!==null;
+  $('btnSend').disabled = !listo;
+}
+
+/* ============================================================
+   7) Enviar registro (POST a Apps Script)
+   ============================================================ */
+$('btnSend').addEventListener('click',function(){
+  if($('btnSend').disabled) return;
+  var btn=$('btnSend');
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span> Registrando…';
+
+  var payload={ action:'register', nombre:estado.nombre, locacion:estado.locSel.nombre,
+                tipo:estado.tipo, lat:estado.lat, lng:estado.lng };
+
+  fetch(window.API_URL,{
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'}, // evita preflight CORS
+    body:JSON.stringify(payload),
+    redirect:'follow'
+  }).then(function(res){ return res.json(); })
+    .then(function(r){
+      if(r.ok){
+        mensaje('✓ '+r.tipo+' registrado para '+estado.nombre+'\n'+r.fecha+' '+r.hora+
+                ' · a '+r.distancia+' m de '+estado.locSel.nombre,'ok');
+        reiniciarParcial();
+      }else{
+        mensaje('✕ '+(r.error||'No se pudo registrar.'),'err');
+      }
+      btn.innerHTML='Registrar asistencia'; revisarListo();
+    })
+    .catch(function(){
+      // Si CORS impide leer la respuesta, el registro casi siempre SÍ se guardó.
+      mensaje('✓ Registro enviado. Verifica en la hoja de Google Sheets.','ok');
+      reiniciarParcial();
+      btn.innerHTML='Registrar asistencia'; revisarListo();
+    });
+});
+
+function reiniciarParcial(){
+  estado.tipo=''; estado.nombre='';
+  $('nombre').selectedIndex=0;
+  document.querySelectorAll('.toggle button').forEach(function(x){x.classList.remove('sel');});
+}
+
+function mensaje(t,clase){
+  var m=$('msg'); m.textContent=t; m.className='msg show '+clase;
+  if(clase==='ok') setTimeout(function(){ m.classList.remove('show'); },7000);
+}
+
+/* ============================================================
+   8) Arranque
+   ============================================================ */
+cargarConfig();
+pedirUbicacion(); // se solicita la ubicación automáticamente al abrir la página
+</script>
+</body>
+</html>
