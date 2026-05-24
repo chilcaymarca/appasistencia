@@ -150,6 +150,7 @@
     <div class="steptitle"><div class="stepnum">2</div><h2>Elige la locación</h2></div>
     <label for="loc">Sede de trabajo</label>
     <select id="loc"></select>
+    <div id="locStatus" class="pill bad" style="display:none"></div>
     <div id="distPill" class="pill bad" style="display:none"></div>
   </section>
 
@@ -273,9 +274,16 @@ function actualizarDistancia(){
 /* ============================================================
    5) Carga de configuración (locaciones + personal)
    ============================================================ */
+function locMsg(texto, ok){
+  var el=$('locStatus');
+  el.style.display='inline-flex';
+  el.className='pill '+(ok?'ok':'bad');
+  el.textContent=texto;
+}
+
 function cargarConfig(){
   if(window.API_URL.indexOf('https://script.google.com/macros/s/AKfycbzZrCi866_Omz0H9QNAvepI7GcBC7pKh4t4YgTdBlB6nZ0ytqm45dDn2OYi0Ec3bhlL/exec')===0){
-    mensaje('Falta configurar la URL del backend (window.API_URL en el código).','err');
+    locMsg('⚠ Falta pegar la URL del backend (window.API_URL) en el código.',false);
     // Fallback de demostración para que se vea la interfaz:
     estado.locaciones=[
       {nombre:'HUICHUPAQUI',lat:-16.3988,lng:-71.5369,radio:100},
@@ -285,12 +293,22 @@ function cargarConfig(){
     pintarLocaciones(['Juan Pérez','María López','Carlos Ramos']);
     return;
   }
+  if(window.API_URL.indexOf('/exec')<0){
+    locMsg('⚠ La URL no termina en /exec. Usa la URL de implementación, no la /dev.',false);
+  } else {
+    locMsg('Cargando sedes…',true);
+  }
   jsonp({action:'getConfig'}).then(function(r){
-    if(!r.ok) throw new Error(r.error||'Error de configuración');
+    if(!r||!r.ok) throw new Error((r&&r.error)||'respuesta vacía');
     estado.locaciones=r.locaciones||[];
+    if(estado.locaciones.length===0){
+      locMsg('El backend respondió, pero sin sedes. Revisa la hoja "Locaciones".',false);
+      return;
+    }
+    $('locStatus').style.display='none';
     pintarLocaciones(r.personal||[]);
   }).catch(function(e){
-    mensaje('No se pudo cargar la configuración: '+e.message,'err');
+    locMsg('No se pudieron cargar las sedes ('+e.message+'). Verifica que la URL termine en /exec y que el acceso sea "Cualquier usuario".',false);
   });
 }
 
